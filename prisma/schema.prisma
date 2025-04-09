@@ -1,0 +1,72 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model UserPreferences {
+  id               String   @id @default(uuid())
+  userId           String   @unique // For future user authentication
+  hintLevel        Int      @default(50)
+  translationDetail Int     @default(50)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Flashcard {
+  id            String   @id @default(cuid())
+  userId        String
+  word          String
+  directTranslation String
+  translation   Json?
+  difficulty    Int      @default(3)
+  reviewCount   Int      @default(0)
+  correctStreak Int      @default(0)
+  lastReviewed  DateTime?
+  nextReview    DateTime?
+  dateAdded     DateTime @default(now())
+  status        String   @default("active")
+  masteryLevel  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  translations  Translation[]
+  reviews       ReviewHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([nextReview])
+  @@unique([userId, word])
+}
+
+model Translation {
+  id          String    @id @default(uuid())
+  text        String
+  language    String    // e.g., "en", "es", "fr"
+  flashcardId String
+  flashcard   Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ReviewHistory {
+  id          String    @id @default(uuid())
+  flashcardId String
+  flashcard   Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  userId      String    // For future user authentication
+  status      String    // "correct", "incorrect", "hint_used"
+  reviewedAt  DateTime  @default(now())
+}
+
+model ReadingList {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+} 
