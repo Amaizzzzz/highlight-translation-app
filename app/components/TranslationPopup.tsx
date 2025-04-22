@@ -33,31 +33,44 @@ const TranslationPopup: React.FC<TranslationPopupProps> = ({
     const popup = popupRef.current;
     if (!popup) return;
 
-    // Ensure popup is within viewport bounds
-    const rect = popup.getBoundingClientRect();
+    // Get viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+
+    // Get popup dimensions
+    const rect = popup.getBoundingClientRect();
+    const popupWidth = rect.width;
+    const popupHeight = rect.height;
 
     let { x, y } = position;
 
-    // Adjust horizontal position if popup would overflow
-    if (rect.right > viewportWidth) {
-      x = viewportWidth - rect.width - 20;
-    }
-    if (x < 0) {
-      x = 20;
-    }
+    // Add scroll offset to position
+    x += scrollX;
+    y += scrollY;
 
-    // Adjust vertical position if popup would overflow
-    if (rect.bottom > viewportHeight) {
-      y = y - rect.height - 40; // Position above selection
-    }
-    if (y < 0) {
-      y = 20;
-    }
+    // Calculate boundaries
+    const minX = 20; // Minimum distance from left edge
+    const maxX = viewportWidth - popupWidth - 20; // Maximum x position (20px from right edge)
+    const minY = 20; // Minimum distance from top edge
+    const maxY = viewportHeight - popupHeight - 20; // Maximum y position (20px from bottom edge)
 
+    // Adjust horizontal position
+    x = Math.max(minX, Math.min(x, maxX));
+
+    // Adjust vertical position
+    // If popup would go below viewport, position it above the selection
+    if (y + popupHeight > viewportHeight + scrollY) {
+      y = y - popupHeight - 40; // 40px above selection
+    }
+    y = Math.max(minY + scrollY, Math.min(y, maxY + scrollY));
+
+    // Apply position
     popup.style.left = `${x}px`;
     popup.style.top = `${y}px`;
+    popup.style.maxHeight = `${viewportHeight - 40}px`; // Maximum height with 20px padding top and bottom
+    popup.style.maxWidth = `${viewportWidth - 40}px`; // Maximum width with 20px padding left and right
 
     // Handle click outside
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,18 +87,41 @@ const TranslationPopup: React.FC<TranslationPopupProps> = ({
 
   const handleAddToFlashcards = async () => {
     if (!onAddToFlashcards) return;
+    
+    // Check if already in process of adding
+    if (addStatus === 'adding' || addStatus === 'added') return;
+
+    // If already marked as existing, show feedback
+    if (addStatus === 'exists') {
+      // Flash the button to provide feedback
+      setAddStatus('idle');
+      setTimeout(() => setAddStatus('exists'), 100);
+      return;
+    }
+
     setAddStatus('adding');
     try {
       const status = await onAddToFlashcards(text, translation);
       setAddStatus(status);
-      setTimeout(() => {
-        if (status === 'added') {
+      
+      // Only close popup if successfully added
+      if (status === 'added') {
+        setTimeout(() => {
           onClose();
-        }
-      }, 1500);
+        }, 1500);
+      } else if (status === 'exists') {
+        // Provide visual feedback but don't close
+        setTimeout(() => {
+          setAddStatus('exists');
+        }, 1500);
+      }
     } catch (error) {
       console.error('Error adding to flashcards:', error);
       setAddStatus('error');
+      // Reset error state after 2 seconds
+      setTimeout(() => {
+        setAddStatus('idle');
+      }, 2000);
     }
   };
 
@@ -105,14 +141,16 @@ const TranslationPopup: React.FC<TranslationPopupProps> = ({
   };
 
   const getAddButtonClass = () => {
-    const baseClass = "mt-2 px-4 py-2 rounded transition-colors";
+    const baseClass = "mt-2 px-4 py-2 rounded transition-colors duration-200";
     switch (addStatus) {
       case 'added':
         return `${baseClass} bg-green-500 text-white cursor-default`;
       case 'exists':
-        return `${baseClass} bg-gray-400 text-white cursor-default`;
+        return `${baseClass} bg-gray-400 text-white cursor-default hover:bg-gray-500`;
       case 'error':
         return `${baseClass} bg-red-500 text-white hover:bg-red-600`;
+      case 'adding':
+        return `${baseClass} bg-blue-400 text-white cursor-wait`;
       default:
         return `${baseClass} bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed`;
     }
@@ -254,11 +292,10 @@ const TranslationPopup: React.FC<TranslationPopupProps> = ({
   return (
     <div
       ref={popupRef}
-      className="fixed z-50 bg-white rounded-lg shadow-lg p-4 max-w-md"
+      className="fixed z-50 bg-white rounded-lg shadow-lg p-4 max-w-md overflow-auto"
       style={{
         top: `${position.y}px`,
         left: `${position.x}px`,
-        transform: 'translate(-50%, -100%)',
       }}
     >
       <div className="flex justify-between items-start mb-2">

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Highlight Translation App",
-  description: "An app for translating highlighted text",
+  title: "AIReader+",
+  description: "An intelligent reading assistant powered by AI"
 }; 

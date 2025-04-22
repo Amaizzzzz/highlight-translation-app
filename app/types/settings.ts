@@ -7,6 +7,8 @@ export interface ReadingSettings {
   theme: 'light' | 'dark' | 'sepia';
   hintLevel: number;  // 0-100 scale
   translationDetail: number;  // 0-100 scale
+  sourceLanguage: string;  // source language code
+  targetLanguage: string;  // target language code
 }
 
 export interface UserPreferences extends ReadingSettings {

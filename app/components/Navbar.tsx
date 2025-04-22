@@ -21,7 +21,9 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-blue-600">LangLearn</span>
+              <Link href="/" className="flex items-center">
+                <span className="text-xl font-bold text-blue-600">AIReader+</span>
+              </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navItems.map((item) => (
