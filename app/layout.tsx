@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { LearningSettingsProvider } from './contexts/LearningSettingsContext';
+import Head from 'next/head';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,6 +25,10 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={isDarkMode ? 'dark' : ''}>
+      <head>
+        <title>AIReader+</title>
+        <meta name="description" content="AI-powered reading assistant for language learners" />
+      </head>
       <body className={`${inter.className} transition-colors duration-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}>
         <SettingsProvider>
           <LearningSettingsProvider>

@@ -182,11 +182,11 @@ export async function POST(request: Request) {
     }
 
     // Normalize levels to 1-5 range
-    const normalizedHintLevel = Math.max(1, Math.min(5, Math.round(hintLevel)));
-    const normalizedDetailLevel = Math.max(1, Math.min(5, Math.round(translationDetail)));
+    const normalizedHintLevel = Math.max(1, Math.min(5, Math.ceil(hintLevel)));
+    const normalizedDetailLevel = Math.max(1, Math.min(5, Math.ceil(translationDetail)));
 
     try {
-      console.log('Sending request to OpenAI...');
+      console.log('Sending request to OpenAI with levels:', { hintLevel: normalizedHintLevel, detailLevel: normalizedDetailLevel });
       const completion = await openai.chat.completions.create({
         messages: [
           {
@@ -237,35 +237,26 @@ ${normalizedDetailLevel >= 5 ? '5. Idiomatic expressions and collocations' : ''}
         ...parsedResponse
       };
 
-      // Create flashcard in database
-      const flashcard = await prisma.flashcard.create({
-        data: {
-          word: text,
-          directTranslation: parsedResponse.translation.basic.translation,
-          translation: JSON.stringify(result),
-          difficulty: 3,
-          reviewCount: 0,
-          userId: 'test-user-1',
-          lastReviewed: null,
-          nextReview: null,
-          masteryLevel: 0,
-          correctStreak: 0,
-          status: 'active',
-          translations: {
-            create: [
-              {
-                text: parsedResponse.translation.basic.translation,
-                language: 'en',
-              },
-            ],
-          },
-        },
-      });
+      try {
+        // Create flashcard in database
+        await prisma.flashcard.create({
+          data: {
+            word: text,
+            directTranslation: parsedResponse.translation.basic.translation,
+            translation: JSON.stringify(result),
+            difficulty: 3,
+            reviewCount: 0,
+            userId: 'test-user-1',
+            lastReviewed: null,
+            nextReview: null,
+          }
+        });
+      } catch (error) {
+        console.error('Error saving flashcard:', error);
+        // Continue without saving to database
+      }
 
-      return NextResponse.json({
-        translation: result,
-        flashcardId: flashcard.id
-      });
+      return NextResponse.json(result);
     } catch (error: any) {
       console.error('OpenAI API Error:', error);
       return NextResponse.json(

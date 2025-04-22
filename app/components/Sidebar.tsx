@@ -1,81 +1,54 @@
-import React, { useState } from 'react';
-import LearningSettings from './LearningSettings';
+'use client';
+
+import React from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface SidebarProps {
-  difficulty: number;
-  highlightDensity: number;
-  onDifficultyChange: (value: number) => void;
-  onHighlightDensityChange: (value: number) => void;
+  className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
-  difficulty,
-  highlightDensity,
-  onDifficultyChange,
-  onHighlightDensityChange,
-}) => {
-  const [message, setMessage] = useState('');
-  const [flashcards, setFlashcards] = useState([
-    { front: 'Example Word', back: 'Example Translation', isFlipped: false },
-  ]);
-
-  const toggleFlashcard = (index: number) => {
-    setFlashcards(cards =>
-      cards.map((card, i) =>
-        i === index ? { ...card, isFlipped: !card.isFlipped } : card
-      )
-    );
-  };
+const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
+  const { settings } = useSettings();
 
   return (
-    <div className="w-full space-y-6">
-      {/* Learning Adjustment Panel */}
-      <LearningSettings />
-
-      {/* Flashcards Panel */}
+    <div className={`w-full space-y-6 ${className}`}>
+      {/* Quick Stats Panel */}
       <div className="mac-card p-6">
-        <h2 className="text-lg font-medium text-blue-500 mb-6">My Review List</h2>
+        <h2 className="text-lg font-medium text-blue-500 mb-4">Learning Progress</h2>
         <div className="space-y-4">
-          {flashcards.map((card, index) => (
-            <div
-              key={index}
-              onClick={() => toggleFlashcard(index)}
-              className="group bg-gray-50 rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-sm"
-            >
-              <div className="font-medium text-gray-800">{card.isFlipped ? card.back : card.front}</div>
-              <div className="text-sm text-gray-400 mt-1">
-                {card.isFlipped ? 'Click to see word' : 'Click to see translation'}
-              </div>
-            </div>
-          ))}
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">Flashcards</span>
+            <span className="text-sm font-medium text-blue-600">0/0</span>
+          </div>
         </div>
       </div>
 
-      {/* AI Assistant Panel */}
+      {/* Flashcards Panel */}
       <div className="mac-card p-6">
-        <h2 className="text-lg font-medium text-blue-500 mb-6">AI Language Assistant</h2>
-        <div className="flex flex-col space-y-4">
+        <h2 className="text-lg font-medium text-blue-500 mb-4">My Review List</h2>
+        <div className="space-y-4">
           <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
-            How can I help you understand the text better?
+            Your flashcards will appear here. Select text in the reading area to add new words.
           </div>
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter your question..."
-              className="mac-input flex-1 px-4 py-2 text-sm"
-            />
-            <button
-              onClick={() => {
-                // Handle chat message
-                setMessage('');
-              }}
-              className="mac-button text-sm"
-            >
-              Send
-            </button>
-          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions Panel */}
+      <div className="mac-card p-6">
+        <h2 className="text-lg font-medium text-blue-500 mb-4">Quick Actions</h2>
+        <div className="flex flex-col space-y-3">
+          <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-50">
+            <span>⚡️</span>
+            <span>Start Practice Session</span>
+          </button>
+          <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-50">
+            <span>📊</span>
+            <span>View Statistics</span>
+          </button>
+          <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-50">
+            <span>⚙️</span>
+            <span>Settings</span>
+          </button>
         </div>
       </div>
     </div>
