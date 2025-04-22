@@ -13,6 +13,13 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const suggestions = [
+    { text: 'What are the specific uses of this word?', icon: '💭' },
+    { text: 'Can you give me more example sentences?', icon: '📝' },
+    { text: 'How can I memorize this word?', icon: '🧠' },
+    { text: 'What are similar words?', icon: '🔄' }
+  ];
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -33,7 +40,7 @@ export default function AIAssistant() {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
     try {
-      const response = await fetch('/api/assistant', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,62 +68,77 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 bg-white rounded-lg shadow-lg border border-gray-200">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold">AI Language Assistant</h3>
-      </div>
-      
-      <div className="h-96 overflow-y-auto p-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`mb-4 ${
-              message.role === 'user' ? 'text-right' : 'text-left'
-            }`}
-          >
-            <div
-              className={`inline-block p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {message.content}
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        {messages.length === 0 ? (
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              You can ask me any questions about language learning, such as:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => setInput(suggestion.text)}
+                  className="inline-flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm text-gray-700 transition-colors"
+                >
+                  <span>{suggestion.icon}</span>
+                  <span>{suggestion.text}</span>
+                </button>
+              ))}
             </div>
           </div>
-        ))}
-        {isLoading && (
-          <div className="text-left">
-            <div className="inline-block p-3 rounded-lg bg-gray-100 text-gray-800">
-              Thinking...
-            </div>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    message.role === 'user'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {message.content}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-lg px-4 py-2 bg-gray-100 text-gray-800">
+                  Thinking...
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything about English..."
-            className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className={`px-4 py-2 rounded-lg ${
-              isLoading || !input.trim()
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            Send
-          </button>
-        </div>
+      <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask me anything about language learning..."
+          className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !input.trim()}
+          className={`px-4 py-2 rounded-lg ${
+            isLoading || !input.trim()
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          Send
+        </button>
       </form>
     </div>
   );

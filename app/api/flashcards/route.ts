@@ -1,68 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
+import { PrismaClient } from '@prisma/client';
+import { TranslationEntry } from '../../types/translation';
+
+const prismaClient = new PrismaClient();
 
 // GET /api/flashcards - Get all flashcards for a user
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const userId = searchParams.get('userId') || 'test-user-1';
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const flashcards = await prisma.flashcard.findMany({
-      where: { userId },
-      include: {
-        translations: true,
-        reviews: {
-          orderBy: { reviewedAt: 'desc' },
-          take: 1,
-        },
+    const flashcards = await prismaClient.flashcard.findMany({
+      where: {
+        userId
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
 
     return NextResponse.json(flashcards);
   } catch (error) {
     console.error('Error fetching flashcards:', error);
-    return NextResponse.json({ error: 'Failed to fetch flashcards' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch flashcards' },
+      { status: 500 }
+    );
   }
 }
 
 // POST /api/flashcards - Create a new flashcard
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { word, translations, userId } = body;
+    const { word, translation, userId = 'test-user-1' } = await request.json();
 
-    if (!word || !translations || !userId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    // Normalize the word (trim and lowercase) for consistent comparison
+    const normalizedWord = word.trim().toLowerCase();
 
-    // Use the first translation as the direct translation
-    const directTranslation = translations[0]?.text || word;
-
-    const flashcard = await prisma.flashcard.create({
-      data: {
-        word,
+    // Check if flashcard already exists (case-insensitive)
+    const existingFlashcard = await prismaClient.flashcard.findFirst({
+      where: {
         userId,
-        directTranslation,
-        translations: {
-          create: translations.map((t: { text: string; language: string }) => ({
-            text: t.text,
-            language: t.language,
-          })),
-        },
-      },
-      include: {
-        translations: true,
-      },
+        word: {
+          equals: normalizedWord,
+          mode: 'insensitive'  // Case-insensitive comparison
+        }
+      }
     });
 
-    return NextResponse.json(flashcard);
+    if (existingFlashcard) {
+      console.log(`Flashcard already exists for word: ${word}`);
+      return NextResponse.json({ status: 'exists' });
+    }
+
+    // Create new flashcard with normalized word
+    await prismaClient.flashcard.create({
+      data: {
+        word: normalizedWord,  // Store normalized version
+        directTranslation: translation.translation.basic.translation,
+        translation: JSON.stringify(translation),
+        difficulty: translation.difficulty || 3,
+        reviewCount: 0,
+        userId,
+        lastReviewed: null,
+        nextReview: null
+      }
+    });
+
+    console.log(`Created new flashcard for word: ${word}`);
+    return NextResponse.json({ status: 'added' });
   } catch (error) {
     console.error('Error creating flashcard:', error);
-    return NextResponse.json({ error: 'Failed to create flashcard' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create flashcard' },
+      { status: 500 }
+    );
   }
 }
 

@@ -3,9 +3,18 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import LearningSettings from '../LearningSettings';
 import { LearningSettingsProvider } from '../../contexts/LearningSettingsContext';
+import { SettingsProvider } from '../../contexts/SettingsContext';
 
 // Mock the fetch function
 global.fetch = jest.fn();
+
+const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <SettingsProvider>
+    <LearningSettingsProvider>
+      {children}
+    </LearningSettingsProvider>
+  </SettingsProvider>
+);
 
 describe('LearningSettings', () => {
   const mockFetch = global.fetch as jest.Mock;
@@ -42,9 +51,9 @@ describe('LearningSettings', () => {
     let rendered;
     await act(async () => {
       rendered = render(
-        <LearningSettingsProvider>
+        <TestWrapper>
           <LearningSettings />
-        </LearningSettingsProvider>
+        </TestWrapper>
       );
     });
     
@@ -59,9 +68,9 @@ describe('LearningSettings', () => {
   it('renders sliders with initial values', async () => {
     await act(async () => {
       render(
-        <LearningSettingsProvider>
+        <TestWrapper>
           <LearningSettings />
-        </LearningSettingsProvider>
+        </TestWrapper>
       );
     });
 
@@ -90,9 +99,9 @@ describe('LearningSettings', () => {
 
     await act(async () => {
       render(
-        <LearningSettingsProvider>
+        <TestWrapper>
           <LearningSettings />
-        </LearningSettingsProvider>
+        </TestWrapper>
       );
     });
 
@@ -136,9 +145,9 @@ describe('LearningSettings', () => {
 
     await act(async () => {
       render(
-        <LearningSettingsProvider>
+        <TestWrapper>
           <LearningSettings />
-        </LearningSettingsProvider>
+        </TestWrapper>
       );
     });
 
@@ -172,9 +181,9 @@ describe('LearningSettings', () => {
 
     await act(async () => {
       render(
-        <LearningSettingsProvider>
+        <TestWrapper>
           <LearningSettings />
-        </LearningSettingsProvider>
+        </TestWrapper>
       );
     });
 

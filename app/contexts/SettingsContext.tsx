@@ -11,7 +11,9 @@ const defaultSettings: ReadingSettings = {
   fontSize: 16,
   theme: 'light',
   hintLevel: 50,
-  translationDetail: 50
+  translationDetail: 50,
+  sourceLanguage: '',
+  targetLanguage: ''
 };
 
 const defaultUserPreferences: UserPreferences = {

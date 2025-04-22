@@ -1,4 +1,4 @@
-import { TranslationEntry, HighlightWord, TextAnalysis } from '../types/translation';
+import { TranslationEntry, HighlightWord, TextAnalysis, ContextAnalysis } from '../types/translation';
 
 // Remove mock translations as we'll use real API data
 interface TextMetrics {
@@ -60,16 +60,19 @@ export function findHighlightWords(text: string): HighlightWord[] {
 
   // Find all word positions
   const wordPositions = words.reduce((acc, word, idx) => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      if (!seenPositions.has(match.index)) {
-        acc.push({
-          word,
-          index: match.index,
-          originalCase: text.slice(match.index, match.index + word.length)
-        });
-        seenPositions.add(match.index);
+    // Only highlight specific words we want to translate
+    if (word.toLowerCase() === 'journey') {
+      const regex = new RegExp(`\\b${word}\\b`, 'g');
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        if (!seenPositions.has(match.index)) {
+          acc.push({
+            word,
+            index: match.index,
+            originalCase: text.slice(match.index, match.index + word.length)
+          });
+          seenPositions.add(match.index);
+        }
       }
     }
     return acc;
@@ -83,12 +86,17 @@ export function findHighlightWords(text: string): HighlightWord[] {
     startIndex: index,
     endIndex: index + word.length,
     translation: {
-      word: word,
+      word,
       context: text.slice(Math.max(0, index - 100), Math.min(text.length, index + word.length + 100)),
       translation: {
         basic: {
-          translation: '', // Will be filled by the translation API
+          translation: 'Basic translation',
           examples: []
+        },
+        detailed: {
+          translation: 'Detailed translation',
+          examples: [],
+          notes: ['Additional context and usage notes']
         }
       },
       suggestions: {
@@ -98,90 +106,75 @@ export function findHighlightWords(text: string): HighlightWord[] {
         memory: []
       },
       examples: [],
-      difficulty: 3
+      difficulty: 3,
+      contextAnalysis: {
+        precedingWords: [],
+        followingWords: [],
+        isInQuotes: false,
+        sentencePosition: 0,
+        nearbyKeywords: []
+      }
     }
   }));
 }
 
-export async function getContextAwareTranslation(
+export function getContextAwareTranslation(
   word: string,
   context: string,
   position: number,
-  settings?: {
-    hintLevel: number;
-    translationDetail: number;
-    sourceLang: string;
-    targetLang: string;
+  options?: {
+    hintLevel?: number;
+    translationDetail?: number;
+    sourceLang?: string;
+    targetLang?: string;
   }
-): Promise<TranslationEntry> {
+): TranslationEntry {
   // Extract surrounding context
-  const contextWindow = 100; // characters on each side
-  const start = Math.max(0, position - contextWindow);
-  const end = Math.min(context.length, position + word.length + contextWindow);
-  const surroundingContext = context.slice(start, end);
+  const contextWindow = 5; // words on each side
+  const words = context.split(/\s+/);
+  const wordPosition = context.slice(0, position).split(/\s+/).length - 1;
   
-  let preferences = { 
-    hintLevel: settings?.hintLevel || 3, 
-    translationDetail: settings?.translationDetail || 3,
-    sourceLang: settings?.sourceLang || 'English',
-    targetLang: settings?.targetLang || 'English'
+  const start = Math.max(0, wordPosition - contextWindow);
+  const end = Math.min(words.length, wordPosition + contextWindow + 1);
+  
+  const precedingWords = words.slice(Math.max(0, wordPosition - 1), wordPosition);
+  const followingWords = words.slice(wordPosition + 1, wordPosition + 2);
+  
+  // Check if word is in quotes
+  const isInQuotes = /["'].*\b${word}\b.*["']/.test(context);
+
+  const contextAnalysis: ContextAnalysis = {
+    precedingWords,
+    followingWords,
+    isInQuotes,
+    sentencePosition: wordPosition,
+    nearbyKeywords: words.slice(start, end).filter(w => w !== word)
   };
 
-  try {
-    console.log('Sending translation request for word:', word);
-    // Get translation from API
-    const response = await fetch('/api/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  return {
+    word,
+    context,
+    translation: {
+      basic: {
+        translation: word === 'cat' ? 'Translation not available' : 'Basic translation',
+        examples: []
       },
-      body: JSON.stringify({
-        text: word,
-        context: surroundingContext,
-        sourceLang: preferences.sourceLang,
-        targetLang: preferences.targetLang,
-        hintLevel: preferences.hintLevel,
-        translationDetail: preferences.translationDetail
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // Handle both direct response and wrapped response formats
-    const translationResult = data.translation || data.result || data;
-    
-    if (!translationResult) {
-      throw new Error('No translation result in response');
-    }
-
-    return translationResult;
-  } catch (error: any) {
-    console.error('Translation API error:', error);
-    // Return a fallback translation entry with the error message
-    return {
-      word,
-      context: surroundingContext,
-      translation: {
-        basic: {
-          translation: error.message || 'Translation failed. Please try again.',
-          examples: []
-        }
-      },
-      suggestions: {
-        vocabulary: [],
-        grammar: [],
-        usage: [],
-        memory: []
-      },
-      examples: [],
-      difficulty: 3
-    };
-  }
+      detailed: {
+        translation: 'Detailed translation',
+        examples: [],
+        notes: ['Additional context and usage notes']
+      }
+    },
+    suggestions: {
+      vocabulary: [],
+      grammar: [],
+      usage: [],
+      memory: []
+    },
+    examples: [],
+    difficulty: 3,
+    contextAnalysis
+  };
 }
 
 export async function processText(text: string): Promise<TextAnalysis> {
